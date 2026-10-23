@@ -1,0 +1,293 @@
+Rapport_Theorique_RDF.pdf
+PAGES: 8
+
+--- PAGE 1 ---
+utfcode
+utf8.sty 3.10 UTF-8 input encoding 13.06.2000
+scanner for code UTF-8 installed.
+1
+
+--- PAGE 2 ---
+Cadre Th´eorique et Justifications M´ethodologiques
+en Reconnaissance des Formes pour la Classification
+Supervis´ee
+Syst`emes d’Information, Intelligence Artificielle & Science des Donn´ees
+21 octobre 2026
+R´esum´e
+Cedocument´etablitlecadreth´eoriquerigoureuxetcompletsous-jacentausyst`emedere-
+connaissancedesformesappliqu´e`alaclassificationdedonn´eescomplexes(notammentlaclas-
+sificationdeparcellesagricolespart´el´ed´etection).Nouspr´esentonsl’architectures´equentielle
+du syst`eme, les d´efinitions des motifs (patterns) spatio-temporels et spectraux, les formu-
+lations math´ematiques compl`etes des m´ethodes de pr´etraitement et de normalisation, la
+r´eduction de dimensionnalit´e, le mod`ele de classification par Forˆets Al´eatoires (Random Fo-
+rest) compar´e aux fonctions discriminantes lin´eaires, ainsi que les crit`eres d’´evaluation des
+performances. Chaque choix m´ethodologique est soutenu par une justification th´eorique et
+acad´emique formelle.
+Table des mati`eres
+1 Architecture G´en´erale d’un Syst`eme de Reconnaissance des Formes 4
+1.1 Chaˆıne de Traitement Canonique . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+1.2 Justification Th´eorique de la Structure S´equentielle . . . . . . . . . . . . . . . . . 4
+2 Notion de Patterns, Caract´eristiques et Classes 4
+2.1 D´efinition Math´ematique du Pattern . . . . . . . . . . . . . . . . . . . . . . . . . 4
+2.2 Typologie des Patterns . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+2.3 Patterns Spatio-Temporels et Spectraux du Projet . . . . . . . . . . . . . . . . . 4
+3 Traitement et Normalisation des Donn´ees 5
+3.1 Formulations Math´ematiques . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+3.1.1 a. Min-Max Scaling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+3.1.2 b. Standardisation (Z-score) . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+3.1.3 c. Normalisation L (Euclidienne) . . . . . . . . . . . . . . . . . . . . . . 5
+2
+3.2 Analyse Comparative et Justification des Choix . . . . . . . . . . . . . . . . . . . 5
+3.3 Recommandations Fondamentales de Pr´etraitement . . . . . . . . . . . . . . . . . 6
+4 R´eduction de la Dimensionnalit´e 6
+4.1 Le Fl´eau de la Dimensionnalit´e (Curse of Dimensionality) . . . . . . . . . . . . . 6
+4.2 M´ethodes de Projection Non-Lin´eaire : Projection de Sammon . . . . . . . . . . 6
+4.3 Justification Int´egr´ee . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+5 Mod`eles D´ecisionnels et Classification Supervis´ee 7
+5.1 Insuffisance des Fonctions Discriminantes Lin´eaires . . . . . . . . . . . . . . . . . 7
+5.2 Algorithme des k-Plus Proches Voisins (k-PPV) . . . . . . . . . . . . . . . . . . . 7
+5.3 Mod`ele Retenu : Forˆets Al´eatoires (Random Forest) . . . . . . . . . . . . . . . . 7
+2
+
+--- PAGE 3 ---
+5.3.1 M´ecanisme d’Agr´egation (Bagging) et Vote Majoritaire . . . . . . . . . . 7
+5.4 Justification Acad´emique du Choix de Random Forest . . . . . . . . . . . . . . . 7
+6 Crit`eres de Performance et E´valuation 8
+6.1 Formulations Math´ematiques des M´etriques . . . . . . . . . . . . . . . . . . . . . 8
+6.1.1 a. Exactitude (Accuracy) . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+6.1.2 b. Pr´ecision . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+6.1.3 c. Rappel (Recall / Sensibilit´e) . . . . . . . . . . . . . . . . . . . . . . . . 8
+6.1.4 d. Sp´ecificit´e . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+6.1.5 e. F1-Score . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+6.2 Synth`ese des M´etriques vs Normalisation . . . . . . . . . . . . . . . . . . . . . . 8
+3
+
+--- PAGE 4 ---
+1 Architecture G´en´erale d’un Syst`eme de Reconnaissance des
+Formes
+Un syst`eme autonome de reconnaissance des formes repose sur une chaˆıne de traitement
+s´equentielle transformant des donn´ees brutes issues de capteurs en d´ecisions cat´egorielles.
+1.1 Chaˆıne de Traitement Canonique
+Le pipeline d’apprentissage et d’inf´erence s’articule autour des blocs fonctionnels suivants :
+1. Capteurs et Acquisition : Captation des signaux bruts S(λ,t,x,y) (e.g., r´eflectance
+multi-spectrale au cours du temps).
+2. Pr´etraitement : Binarisation, filtrage du bruit, segmentation en superpixels et normali-
+sation.
+3. ExtractiondeCaract´eristiques:Mesurequantitativedespropri´et´esphysiques,g´eom´etriques,
+spectrales ou temporelles sous forme d’un vecteur de description X ∈ Rn.
+4. Repr´esentation et R´eduction de Dimension : Projection dans un sous-espace discri-
+minant pour contrer le fl´eau de la dimensionnalit´e.
+5. Classification (Apprentissage Supervis´e) : Cartographie du vecteur r´eduit vers une
+classe d´ecisionnelle y ∈ C = {c ,c ,...,c }.
+1 2 K
+6. Post-traitementetD´ecision:Validationcontextuelleetr´egularisationspatio-temporelle.
+1.2 Justification Th´eorique de la Structure S´equentielle
+— Question : Pourquoi ne pas classifier directement les donn´ees brutes issues des capteurs?
+— Justification : Les donn´ees brutes contiennent une haute variance stochastique, du bruit
+atmosph´erique et des nances redondantes. L’extraction de caract´eristiques isole l’informa-
+tion pertinente et garantit l’invariance par translation ou changement d’´echelle.
+—
+2 Notion de Patterns, Caract´eristiques et Classes
+2.1 D´efinition Math´ematique du Pattern
+Un pattern (ou motif / forme-type) est une repr´esentation caract´eristique d’un objet, d’un
+signal ou d’un ph´enom`ene `a reconnaˆıtre. C’est une forme identifiable et r´ecurrente d´ecrite
+math´ematiquement par un vecteur de caract´eristiques :
+X = [x ,x ,...,x ]T ∈ Rn (1)
+1 2 n
+2.2 Typologie des Patterns
+Selon le domaine d’application, les patterns se d´eclinent en diff´erentes natures :
+2.3 Patterns Spatio-Temporels et Spectraux du Projet
+Dans le cadre de l’analyse agricole par t´el´ed´etection :
+— Motifs Spectraux : Repr´esent´es par la r´eflectance dans les bandes de longueurs d’onde
+(Rouge, Vert, Bleu, Proche Infrarouge PIR, Infrarouge Moyen SWIR).
+— Motifs Temporels : E´volution chronologique des indices de v´eg´etation (e.g., NDVI)
+retra¸cant le cycle ph´enologique de la culture (semis, croissance, floraison, s´enescence).
+—
+4
+
+--- PAGE 5 ---
+Table 1 – Typologie et domaines d’application des patterns.
+Type de Pattern Exemple Domaine d’Application
+Visuel / Spectral Signatures de r´eflectance, textures, contours Vision par ordinateur, T´el´ed´etection
+Sonore Mot, phon`eme, fr´equence fondamentale Reconnaissance vocale
+Textuel Structure syntaxique, mots-cl´es Traitement du langage naturel (NLP)
+Temporel Profil ph´enologique, signal ECG, gestes Analyse de s´eries temporelles
+Symbolique S´equences d’ADN, expressions du code Bio-informatique, Linguistique
+3 Traitement et Normalisation des Donn´ees
+Pour ´eviter que des variables `a forte amplitude num´erique ne dominent artificiellement les
+algorithmesd’apprentissageoulescalculsdedistances,lanormalisationestune´etapeessentielle.
+3.1 Formulations Math´ematiques
+3.1.1 a. Min-Max Scaling
+Ram`ene toutes les valeurs dans l’intervalle [0,1] :
+x−min(x)
+x′ = (2)
+max(x)−min(x)
+3.1.2 b. Standardisation (Z-score)
+Centre les donn´ees sur une moyenne nulle et r´eduit la variance `a l’unit´e :
+x−µ
+x′ = (3)
+σ
+√︂
+ou` µ = 1 ∑︁N x est la moyenne empirique et σ = 1 ∑︁N (x −µ)2 est l’´ecart-type.
+N i=1 i N i=1 i
+3.1.3 c. Normalisation L (Euclidienne)
+2
+Soit un vecteur de caract´eristiques X = [x ,x ,...,x ]T. Sa norme L est d´efinie par :
+1 2 n 2
+⌜
+√︂ ⃓ ⃓∑︂ n
+∥X∥ 2 = x2 1 +x2 2 +···+x2 n = ⎷ x2 r (4)
+r=1
+La version normalis´ee X′ du vecteur est :
+X
+[︃
+x x x
+]︃T
+X′ = = 1 , 2 ,..., n (5)
+∥X∥ ∥X∥ ∥X∥ ∥X∥
+2 2 2 2
+Ainsi, la norme du vecteur transform´e garantit :
+∥X′∥ = 1 (6)
+2
+3.2 Analyse Comparative et Justification des Choix
+— Question : Pourquoi privil´egier le Z-score par rapport au Min-Max Scaling dans notre
+projet?
+5
+
+--- PAGE 6 ---
+— Justification : Le Min-Max Scaling est extrˆemement sensible aux valeurs aberrantes
+(outliers), qui r´eduisent l’intervalle des donn´ees normales `a une plage minuscule. La Stan-
+dardisation Z-score est plus robuste aux bruits atmosph´eriques et pr´eserve la structure de
+la distribution gaussienne des donn´ees.
+— Question : Quand utiliser la normalisation L ?
+2
+— Justification :LanormalisationL estprincipalementr´eserv´eeauxvecteurscreux(sparse
+2
+vectors) ou aux donn´ees textuelles/spectrales ou` la direction du vecteur importe plus que
+son intensit´e absolue.
+3.3 Recommandations Fondamentales de Pr´etraitement
+1. Consistance des param`etres : Toujours appliquer aux donn´ees de test la mˆeme trans-
+formation (µ et σ) calcul´ee exclusivement sur l’ensemble d’entraˆınement pour ´eviter toute
+fuite d’information (data leakage).
+2. Variables cat´egorielles : Ne jamais appliquer de normalisation continue aux variables
+discr`etes ou encod´ees en One-Hot.
+—
+4 R´eduction de la Dimensionnalit´e
+4.1 Le Fl´eau de la Dimensionnalit´e (Curse of Dimensionality)
+Lorsque la dimension n de l’espace de caract´eristiques augmente, le volume de l’espace croˆıt
+de mani`ere exponentielle. Sans une augmentation exponentielle du nombre d’´echantillons d’ap-
+prentissage N, la densit´e des points devient quasi-nulle, conduisant au sur-apprentissage (over-
+fitting).
+4.2 M´ethodes de Projection Non-Lin´eaire : Projection de Sammon
+Pourlavisualisationetlar´eductionnon-lin´eaire,laprojectiondeSammoncherche`apr´eserver
+la topologie en minimisant l’erreur d’inter-distance :
+(︂ )︂2
+n D (x ,x )−D (x′,x′)
+1 ∑︂ p i j p′ i j
+E = (7)
+∑︁
+D (x ,x ) D (x ,x )
+i<j p i j i<j p i j
+ou` D (x ,x ) repr´esente la distance dans l’espace initial de dimension p, et D (x′,x′) est la
+p i j p′ i j
+distance dans l’espace r´eduit de dimension p′.
+4.3 Justification Int´egr´ee
+— Question : Quel est l’int´erˆet de r´eduire la dimension avant d’appliquer un classifieur?
+— Justification : La r´eduction ´elimine la collin´earit´e entre bandes spectrales proches (e.g.,
+Rouge et Vert), acc´el`ere le temps de calcul, et am´eliore la g´en´eralisation du mod`ele sur de
+nouvelles parcelles.
+—
+6
+
+--- PAGE 7 ---
+5 Mod`eles D´ecisionnels et Classification Supervis´ee
+5.1 Insuffisance des Fonctions Discriminantes Lin´eaires
+Les mod`eles lin´eaires reposent sur la construction d’un hyperplan de d´ecision d´efini par :
+n
+∑︂
+g(X) = WTX +b = w x +b (8)
+i i
+i=1
+La r`egle de d´ecision binaire s’´ecrit :
+{︄
+Classe 1 si g(X) > 0
+D´ecision = (9)
+Classe 2 si g(X) ≤ 0
+Limitation : En t´el´ed´etection, les fronti`eres inter-classes (ex : bl´e vs orge) sont intrins`equement
+nonlin´eaireset intriqu´eesdansl’espacedes phases.UnhyperplanWTX+b produitunfort biais
+de sous-apprentissage.
+5.2 Algorithme des k-Plus Proches Voisins (k-PPV)
+M´ethode non param´etrique bas´ee sur la distance euclidienne :
+⌜
+⃓ n
+⃓∑︂
+d(x i ,x j ) = ⎷ (x ir −x jr )2 (10)
+r=1
+Limitation : Le couˆt computationnel en O(N ·n) lors de l’inf´erence rend k-PPV inexploitable
+sur de tr`es grands volumes de donn´ees satellitaires.
+5.3 Mod`ele Retenu : Forˆets Al´eatoires (Random Forest)
+Les Forˆets Al´eatoires combinent un ensemble de M arbres de d´ecision {h(X,Θ )}M , ou`
+m m=1
+Θ sont des variables al´eatoires ind´ependantes identiquement distribu´ees.
+m
+5.3.1 M´ecanisme d’Agr´egation (Bagging) et Vote Majoritaire
+La pr´ediction finale pour un vecteur X est obtenue par aggregation d´emocratique :
+M
+∑︂
+yˆ= argmax I(h(X,Θ ) = c) (11)
+m
+c∈C
+m=1
+ou` I(·) est la fonction indicatrice.
+5.4 Justification Acad´emique du Choix de Random Forest
+— Non-lin´earit´e : Capacit´e native `a s´eparer des espaces de d´ecisions complexes sans trans-
+formation explicite par noyau.
+— Lutte contre la variance : L’agr´egation par bagging r´eduit la variance globale sans
+augmenter le biais.
+— Insensibilit´e relative au bruit : Tr`es tol´erant aux erreurs d’´etiquetage ponctuelles et
+aux donn´ees manquantes.
+—
+7
+
+--- PAGE 8 ---
+´
+6 Crit`eres de Performance et Evaluation
+L’´evaluation de la qualit´e de la classification supervis´ee repose sur la matrice de confusion et
+les m´etriques d´eriv´ees des vrais positifs (TP), vrais n´egatifs (TN), faux positifs (FP), et faux
+n´egatifs (FN).
+6.1 Formulations Math´ematiques des M´etriques
+6.1.1 a. Exactitude (Accuracy)
+E´value le taux de reconnaissance global :
+TP +TN
+Exactitude = (12)
+TP +TN +FP +FN
+6.1.2 b. Pr´ecision
+Mesure la proportion de pr´edictions positives qui sont r´eellement correctes :
+TP
+Pr´ecision = (13)
+TP +FP
+6.1.3 c. Rappel (Recall / Sensibilit´e)
+Mesure la capacit´e du mod`ele `a d´etecter la totalit´e d’une classe donn´ee :
+TP
+Rappel = (14)
+TP +FN
+6.1.4 d. Sp´ecificit´e
+Mesure la proportion de cas n´egatifs correctement identifi´es :
+TN
+Sp´ecificit´e = (15)
+TN +FP
+6.1.5 e. F1-Score
+Moyenne harmonique entre la pr´ecision et le rappel, indispensable en cas de d´es´equilibre des
+classes :
+Pr´ecision×Rappel 2·TP
+F1-Score = 2× = (16)
+Pr´ecision+Rappel 2·TP +FP +FN
+6.2 Synth`ese des M´etriques vs Normalisation
+Table 2 – Matrice d’alignement des composantes th´eoriques du projet.
+Composante Concept Th´eorique Retenu Justification Principale
+Pr´etraitement Standardisation Z-score E´galise l’importance des variables sans sensibilit´e aux outliers.
+Descripteurs Patterns Spatio-Temporels Capture la signature ph´enologique compl`ete des parcelles.
+R´eduction ACP / Sammon E´limine la redondance inter-spectrale et la haute dimension.
+Classifieur Random Forest Fronti`eres non lin´eaires robustes au sur-apprentissage.
+E´valuation F1-Score et Matrice de Confusion E´valuation non biais´ee face au d´es´equilibre des classes agricoles.
+8

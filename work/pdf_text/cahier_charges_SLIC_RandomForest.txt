@@ -1,0 +1,1268 @@
+cahier_charges_SLIC_RandomForest.pdf
+PAGES: 44
+
+--- PAGE 1 ---
+CAHIER DES CHARGES TECHNIQUE
+Classification de parcelles agricoles
+par superpixels SLIC
+Variante B : SLIC + caractéristiques spectrales + Random Forest
+Système de reconnaissance des formes et de classification supervisée
+Télédétection spatio-temporelle appliquée à la culture du maïs
+Domaine Intelligence artificielle, science des données et
+télédétection
+Objet principal Détection et classification de parcelles agri-
+coles à partir de séries Sentinel-2
+Unité d’analyse Superpixel SLIC associé à une parcelle ou à
+une région homogène
+Modèle retenu Random Forest, apprentissage supervisé
+Classes cibles Maïs, arboriculture, prairies/savane, sols
+nus/surfaces bâties
+Version Cahier des charges théorique et opérationnel
+21 octobre 2026
+
+--- PAGE 2 ---
+Table des matières
+1 Présentation générale du projet 1
+1.1 Contexte . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 1
+1.2 Problématique . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 1
+1.3 Objectif général . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+1.4 Objectifs spécifiques . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+1.5 Périmètre . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+2 Cadre théorique de la reconnaissance des formes 3
+2.1 Architecture générale du système . . . . . . . . . . . . . . . . . . . . . . 3
+2.2 Définition mathématique d’un motif . . . . . . . . . . . . . . . . . . . . . 3
+2.3 Motifs spectraux et temporels . . . . . . . . . . . . . . . . . . . . . . . . 4
+2.4 Fonction discriminante et frontières de décision . . . . . . . . . . . . . . 4
+3 Spécification des données 5
+3.1 Dataset cible et critères de sélection . . . . . . . . . . . . . . . . . . . . . 5
+3.2 Nature des données . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+3.3 Bandes spectrales requises . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+3.4 Indices botaniques . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+3.4.1 Indice de végétation NDVI . . . . . . . . . . . . . . . . . . . . . . 7
+3.4.2 Indice d’eau NDWI . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+3.5 Cadence temporelle . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+3.6 Classes de classification . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+4 Prétraitement des images et contrôle qualité 9
+4.1 Préparation radiométrique et géométrique . . . . . . . . . . . . . . . . . 9
+4.2 Masquage des nuages et des ombres . . . . . . . . . . . . . . . . . . . . . 9
+4.3 Contrôles et journalisation . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+5 Segmentation spatiale par SLIC 10
+i
+
+--- PAGE 3 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+5.1 Principe . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+5.2 Distance SLIC . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+5.3 Paramètres à fixer . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+5.4 Segmentation temporelle et unité de classification . . . . . . . . . . . . . 11
+5.5 Superpixel et parcelle agricole . . . . . . . . . . . . . . . . . . . . . . . . 11
+6 Extraction des caractéristiques 12
+6.1 Statistiques spectrales par superpixel . . . . . . . . . . . . . . . . . . . . 12
+6.2 Caractéristiques temporelles . . . . . . . . . . . . . . . . . . . . . . . . . 12
+6.3 Descripteurs spatiaux complémentaires . . . . . . . . . . . . . . . . . . . 13
+6.4 Construction du vecteur final . . . . . . . . . . . . . . . . . . . . . . . . 13
+7 Normalisation et réduction de dimension 14
+7.1 Pourquoi normaliser? . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+7.2 Min-Max Scaling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+7.3 Standardisation Z-score . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+7.4 Normalisation L2 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 15
+7.5 Choix et règles de prévention de fuite . . . . . . . . . . . . . . . . . . . . 15
+7.6 Réduction de dimensionnalité . . . . . . . . . . . . . . . . . . . . . . . . 16
+7.6.1 Analyse en composantes principales (ACP) . . . . . . . . . . . . . 16
+7.6.2 Projection de Sammon . . . . . . . . . . . . . . . . . . . . . . . . 16
+7.7 Décision opérationnelle . . . . . . . . . . . . . . . . . . . . . . . . . . . . 17
+8 Modèle prédictif : Random Forest 18
+8.1 Apprentissage supervisé . . . . . . . . . . . . . . . . . . . . . . . . . . . 18
+8.2 Principe des forêts aléatoires . . . . . . . . . . . . . . . . . . . . . . . . . 18
+8.3 Fonction de division des arbres . . . . . . . . . . . . . . . . . . . . . . . 19
+8.4 Justification du choix . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+8.5 Paramètres à ajuster . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+9 Organisation de l’apprentissage et protocole expérimental 21
+9.1 Partitionnement des données . . . . . . . . . . . . . . . . . . . . . . . . . 21
+9.2 Déséquilibre des classes . . . . . . . . . . . . . . . . . . . . . . . . . . . . 21
+9.3 Comparaison expérimentale . . . . . . . . . . . . . . . . . . . . . . . . . 21
+10 Évaluation des performances 23
+10.1 Matrice de confusion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+ii
+
+--- PAGE 4 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+10.2 Exactitude globale . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+10.3 Précision . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+10.4 Rappel ou sensibilité . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+10.5 Spécificité . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+10.6 F1-score . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+10.7 Z-score et F1-score : deux notions différentes . . . . . . . . . . . . . . . . 24
+10.8 Protocole de rapport des résultats . . . . . . . . . . . . . . . . . . . . . . 25
+11 Post-traitement et production cartographique 26
+11.1 Retour des prédictions vers l’espace . . . . . . . . . . . . . . . . . . . . . 26
+11.2 Règles de post-traitement . . . . . . . . . . . . . . . . . . . . . . . . . . 26
+11.3 Livrables cartographiques . . . . . . . . . . . . . . . . . . . . . . . . . . 26
+12 Responsabilités et organisation opérationnelle 28
+12.1 Responsabilité générale du projet . . . . . . . . . . . . . . . . . . . . . . 28
+12.2 Responsabilités détaillées par chantier . . . . . . . . . . . . . . . . . . . . 28
+12.2.1 Responsable 1 : données et télédétection . . . . . . . . . . . . . . 28
+12.2.2 Responsable 2 : segmentation SLIC . . . . . . . . . . . . . . . . . 28
+12.2.3 Responsable 3 : extraction des caractéristiques . . . . . . . . . . . 29
+12.2.4 Responsable 4 : apprentissage et évaluation . . . . . . . . . . . . . 29
+12.2.5 Responsable 5 : cartographie, intégration et reproductibilité . . . 29
+12.3 Responsabilités transversales . . . . . . . . . . . . . . . . . . . . . . . . . 30
+13 Architecture logicielle et exigences techniques 31
+13.1 Organisation logique . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+13.2 Exigences de reproductibilité . . . . . . . . . . . . . . . . . . . . . . . . . 31
+13.3 Formats et nommage . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+13.4 Gestion des ressources . . . . . . . . . . . . . . . . . . . . . . . . . . . . 32
+14 Risques, limites et mesures de maîtrise 33
+15 Plan de réalisation et critères d’acceptation 34
+15.1 Étapes de réalisation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+15.2 Critères d’acceptation . . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+16 Livrables attendus 36
+17 Synthèse théorique des choix retenus 37
+iii
+
+--- PAGE 5 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+Conclusion 38
+iv
+
+--- PAGE 6 ---
+Liste des tableaux
+3.1 Bandes Sentinel-2 mobilisées dans la variante B . . . . . . . . . . . . . . 6
+3.2 Classes cibles et signatures attendues . . . . . . . . . . . . . . . . . . . . 8
+14.1 Risques méthodologiques et mesures de maîtrise . . . . . . . . . . . . . . 33
+16.1 Liste consolidée des livrables . . . . . . . . . . . . . . . . . . . . . . . . . 36
+17.1 Alignement entre les composantes, les choix et leur justification . . . . . 37
+v
+
+--- PAGE 7 ---
+Chapitre 1
+Présentation générale du projet
+1.1 Contexte
+La télédétection agricole permet d’observer l’évolution des surfaces cultivées à partir de
+mesures satellitaires répétées. Les capteurs multispectraux enregistrent la réflectance de
+la surface dans plusieurs bandes de longueurs d’onde. La combinaison de ces mesures et
+de leur évolution temporelle permet de caractériser les couverts végétaux et de distinguer,
+sous réserve de données de référence adéquates, les cultures du maïs d’autres occupations
+du sol.
+Le présent projet opérationnalise un cadre de reconnaissance des formes au moyen d’un
+pipeline supervisé. La variante retenue associe la segmentation en superpixels par SLIC,
+l’extraction de caractéristiques spectrales et temporelles, puis une classification par Forêt
+Aléatoire (Random Forest). Le résultat attendu est une carte thématique géoréférencée,
+accompagnée d’indicateurs quantitatifs de qualité et d’une documentation permettant de
+reproduire le traitement.
+1.2 Problématique
+Une image satellitaire contient des pixels dont la réponse spectrale peut être perturbée
+par les nuages, les ombres, l’humidité, les sols visibles, les mélanges de cultures et les
+différences de stade phénologique. Une classification pixel par pixel peut produire une
+carte fragmentée et ignorer la cohérence locale. À l’inverse, les superpixels regroupent
+des pixels voisins présentant une similarité visuelle ou spectrale et offrent une unité
+intermédiaire pour calculer des descripteurs plus stables.
+La question centrale est donc la suivante : comment combiner la segmentation SLIC, des
+caractéristiques multispectrales et des séries temporelles pour apprendre à reconnaître les
+zones de maïs tout en limitant la confusion avec l’arboriculture, les couverts herbacés et
+les surfaces non végétalisées?
+1
+
+--- PAGE 8 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+1.3 Objectif général
+Concevoir, implémenter, évaluer et documenter un système de classification supervisée
+des parcelles agricoles, centré sur le maïs, à partir d’images multispectrales Sentinel-2, en
+utilisant SLIC pour définir les unités spatiales, des descripteurs spectraux et temporels
+pour représenter chaque unité, et Random Forest pour prédire sa classe.
+1.4 Objectifs spécifiques
+1. Sélectionner un jeu de données comportant des observations Sentinel-2 et des
+référencesdeterrainoudesétiquettesfiablespourlemaïsetlesclassesconcurrentes.
+2. Préparer les images : harmonisation spatiale, masque de nuages et d’ombres,
+contrôle des valeurs manquantes et organisation chronologique.
+3. Segmenter les scènes en superpixels SLIC et documenter les paramètres de seg-
+mentation.
+4. Extraire, pour chaque superpixel et chaque date, des statistiques spectrales, des
+indices de végétation et des descripteurs temporels.
+5. Constituer un jeu d’apprentissage supervisé sans fuite d’information entre appren-
+tissage, validation et test.
+6. Comparer une sélection raisonnée de descripteurs, avec ou sans réduction de
+dimension, puis entraîner un modèle Random Forest.
+7. Évaluer les performances par matrice de confusion, précision, rappel, F1-score,
+exactitude globale et, si possible, métriques par classe.
+8. Produire une carte finale, les fichiers de résultats, le code, les paramètres et un
+rapport reproductible.
+1.5 Périmètre
+Le système porte sur la classification thématique de surfaces agricoles et de classes de
+confusion autour du maïs. Il ne prétend pas déterminer automatiquement les limites
+cadastrales exactes. Un superpixel SLIC est une région d’image relativement homogène
+et n’est pas nécessairement équivalent à une parcelle agricole complète. Si des polygones
+de parcelles fiables sont disponibles, ils servent à agréger les superpixels ou à vérifier leur
+correspondance aux limites réelles.
+Sont inclus : l’acquisition ou la sélection des données, le prétraitement, la segmentation
+SLIC, l’extraction de caractéristiques, l’apprentissage supervisé, l’évaluation et l’export
+cartographique. Sont exclus, sauf extension explicite : la prédiction de rendement, le
+diagnostic sanitaire détaillé, l’estimation économique et la délimitation cadastrale.
+2
+
+--- PAGE 9 ---
+Chapitre 2
+Cadre théorique de la reconnaissance
+des formes
+2.1 Architecture générale du système
+Un système de reconnaissance des formes transforme des données brutes en une décision
+de classe au moyen d’une chaîne de traitement séquentielle :
+1. acquisition des observations satellitaires;
+2. contrôle qualité et prétraitement;
+3. segmentation spatiale en superpixels;
+4. extraction et construction des caractéristiques;
+5. normalisation et éventuelle réduction de dimension;
+6. apprentissage supervisé et classification;
+7. post-traitement, validation et production cartographique.
+Cette séparation fonctionnelle permet d’identifier les erreurs à chaque étape, de comparer
+les variantes et de rendre le pipeline reproductible. Classifier directement les données
+brutes sans contrôle qualité risquerait de faire apprendre au modèle des artefacts liés
+aux nuages, aux différences d’échelle, aux valeurs manquantes ou à des effets de capteur
+plutôt que des propriétés agricoles utiles.
+2.2 Définition mathématique d’un motif
+Un motif (pattern) est une représentation quantitative d’un objet ou phénomène à
+reconnaître. Pour un superpixel s, son vecteur de caractéristiques peut être défini par
+x = [x ,x ,...,x ]⊤ ∈ Rp,
+s s,1 s,2 s,p
+où chaque composante représente une statistique spectrale, un indice, une caractéristique
+temporelle ou un descripteur spatial. La classe de référence est notée
+y ∈ C = {c ,c ,...,c }.
+s 1 2 K
+3
+
+--- PAGE 10 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+Le but de l’apprentissage supervisé est d’estimer une fonction f ˆ : Rp → C qui généralise
+à des superpixels non utilisés pendant l’entraînement.
+2.3 Motifs spectraux et temporels
+Les motifs spectraux décrivent la réponse de la surface dans différentes bandes. Les motifs
+temporels représentent la variation de cette réponse au cours du cycle cultural. Pour le
+maïs, la dynamique du couvert peut refléter les phases de levée, de croissance végétative,
+de développement maximal et de sénescence. L’information temporelle est importante
+parce qu’une seule date peut confondre le maïs avec une prairie ou une autre culture
+présentant une réflectance similaire à cette date.
+2.4 Fonction discriminante et frontières de décision
+Un modèle linéaire peut utiliser une fonction discriminante
+p
+g(x) = w⊤x+b = X w x +b,
+j j
+j=1
+où w est le vecteur des poids et b le biais. Dans un cas binaire, la décision peut être
+formulée comme
+
+c si g(x) > 0,
+1
+yˆ=
+c
+2
+sinon.
+Cette représentation est utile pour comprendre la séparation des classes, mais elle impose
+une frontière linéaire dans l’espace de caractéristiques. Les signatures agricoles dépendent
+de combinaisons complexes entre bandes, dates, humidité, état du couvert et contexte
+spatial. Une seule fonction linéaire peut donc être insuffisante. Random Forest n’est pas
+limité à une fonction discriminante linéaire unique : il construit une frontière non linéaire
+par combinaison de règles issues de plusieurs arbres.
+4
+
+--- PAGE 11 ---
+Chapitre 3
+Spécification des données
+3.1 Dataset cible et critères de sélection
+Le jeu de données cible doit être consacré à la culture du maïs et reposer prioritairement
+sur des séries temporelles Sentinel-2. Il doit contenir, ou permettre de construire, des
+étiquettes de référence pour le maïs et pour les classes concurrentes. Le nom du dataset,
+sa provenance exacte, sa licence, son emprise géographique, ses dates et sa résolution
+doivent être consignés dans le rapport dès qu’un jeu de données réel est sélectionné; ils
+ne sont pas présupposés par le présent cahier des charges.
+Les critères minimaux de sélection sont :
+— disponibilité des images Sentinel-2 ou des produits de réflectance de surface
+correspondants;
+— présence de labels fiables, idéalement issus de relevés de terrain, de polygones
+agricoles vérifiés ou d’une base de référence documentée;
+— observations couvrant l’essentiel du cycle phénologique du maïs;
+— représentativité des classes concurrentes et diversité des conditions de sol et de
+végétation;
+— licence et conditions d’utilisation compatibles avec le projet;
+— métadonnées suffisantes pour reproduire l’acquisition et le prétraitement.
+Une carte d’occupation du sol générique ne doit pas être considérée automatiquement
+comme une vérité terrain pour la culture du maïs. La qualité, la date et la précision des
+labels doivent être vérifiées avant l’apprentissage.
+3.2 Nature des données
+Les données sont des séries temporelles multispectrales spatio-temporelles. On peut
+représenter le signal observé par
+S(λ,t,x,y),
+où λ représente la bande spectrale, t la date d’acquisition et (x,y) la position spatiale.
+Pour une date t, une image est un ensemble de bandes géoréférencées. La série temporelle
+5
+
+--- PAGE 12 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+rassemble les observations ordonnées selon le calendrier de la saison culturale.
+3.3 Bandes spectrales requises
+Les bandes principales retenues sont les suivantes. Les longueurs d’onde centrales sont
+indicatives et dépendent des spécifications du capteur et du produit utilisé.
+Table 3.1 – Bandes Sentinel-2 mobilisées dans la variante B
+Bande Désignation Longueur d’onde indicative Intérêt prin-
+cipal
+B Bleu 490nm Information
+2
+visible et
+contrôle de
+la réponse
+spectrale.
+B Vert 560nm Réponse du
+3
+couvert dans
+le visible.
+B Rouge 665nm Absorption
+4
+liée aux
+pigments
+végétaux.
+B Proche infrarouge (PIR) 842nm Sensible à la
+8
+structure et à
+la vigueur du
+couvert végé-
+tal.
+B Infrarouge moyen (SWIR) 1610nm Information
+11
+liée à l’humi-
+dité et à la
+structure de
+surface.
+B Infrarouge moyen (SWIR) 2190nm Complément
+12
+spectral pour
+distinguer vé-
+gétation, sols
+et humidité.
+Les bandes ne partagent pas toutes la même résolution native. Les bandes utilisées
+conjointement doivent donc être ramenées à une grille spatiale commune, en documentant
+larésolutiondetravail,laméthodederééchantillonnageetseslimites.Lerééchantillonnage
+ne crée pas de détail spatial réel supplémentaire.
+6
+
+--- PAGE 13 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+3.4 Indices botaniques
+Les indices sont calculés à partir des réflectances compatibles, après contrôle qualité
+et harmonisation spatiale. Le dénominateur doit être vérifié afin d’éviter les divisions
+instables lorsque la somme est proche de zéro.
+3.4.1 Indice de végétation NDVI
+L’indice de végétation par différence normalisée est défini par
+ρ −ρ
+B8,t B4,t
+NDVI = ,
+t
+ρ +ρ
+B8,t B4,t
+où ρ désigne la réflectance du proche infrarouge et ρ celle du rouge à la date t. Le
+B8,t B4,t
+NDVI contribue au suivi de la dynamique de la végétation et de l’activité du couvert. Il
+ne constitue toutefois pas une preuve suffisante de la présence du maïs à lui seul.
+3.4.2 Indice d’eau NDWI
+Pour le présent projet, l’indice de différence normalisée utilisant le PIR et le SWIR est
+défini par
+ρ −ρ
+B8,t B11,t
+NDWI = .
+t
+ρ +ρ
+B8,t B11,t
+Cette formulation vise à représenter une information liée à la teneur en eau du couvert.
+Le terme NDWI peut désigner plusieurs formulations dans la littérature; le rapport devra
+donc préciser explicitement la formule utilisée. Une variante fondée sur B peut être
+12
+évaluée si elle est justifiée par les données.
+3.5 Cadence temporelle
+La série temporelle doit couvrir le cycle phénologique complet. La spécification cible est
+de 12 à 24 pas de temps par saison, correspondant à une cadence opérationnelle d’environ
+une à deux observations par mois. Pour éviter l’ambiguïté du terme « bi-mensuel », le
+calendrier réel doit être défini en dates ou en intervalles de jours. La fréquence effective
+dépendra de la couverture satellitaire, de la nébulosité et de la disponibilité d’images
+utilisables.
+Les dates manquantes ne doivent pas être remplacées silencieusement. Les stratégies
+possibles sont : conserver une valeur manquante avec un indicateur associé si le modèle
+et l’implémentation le permettent, interpoler avec une méthode explicitée lorsque cela
+est scientifiquement acceptable, ou exclure les observations insuffisantes selon un seuil
+documenté. Les données interpolées doivent être distinguées des observations satellitaires
+réelles.
+7
+
+--- PAGE 14 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+3.6 Classes de classification
+Le problème est formulé en quatre classes principales :
+Table 3.2 – Classes cibles et signatures attendues
+Code Classe Signature attendue et risque de confusion
+c Maïs Dynamique temporelle du NDVI généralement
+1
+marquée, avec croissance puis sénescence; signa-
+ture à confirmer par des labels locaux.
+c Manguiers / arboriculture Couvert ligneux pérenne, structure et persistance
+2
+temporelle différentes d’une culture annuelle;
+confusion possible selon densité et saison.
+c Prairies / savane naturelle Couvert herbacé dont la dynamique dépend des
+3
+pluies et de la saison; confusion possible avec des
+parcelles de maïs à certains stades.
+c Sols nus / surfaces bâties Réponsevégétalegénéralementfaible;cetteclasse
+4
+regroupe des surfaces hétérogènes et doit être
+interprétée avec prudence.
+Le regroupement des sols nus et des surfaces bâties est conservé conformément au cadrage
+initial. Si les données de référence sont suffisantes, une extension pourra les séparer
+en deux classes afin de réduire l’hétérogénéité intra-classe. Toute modification de la
+nomenclature devra être enregistrée et appliquée uniformément aux labels, au modèle et
+aux cartes.
+8
+
+--- PAGE 15 ---
+Chapitre 4
+Prétraitement des images et contrôle
+qualité
+4.1 Préparation radiométrique et géométrique
+Le pipeline doit privilégier des réflectances de surface corrigées atmosphériquement,
+lorsque disponibles. Les métadonnées et l’identifiant du produit doivent être conservés.
+Les scènes doivent être reprojetées dans un système de coordonnées adapté à l’emprise,
+puis alignées sur une grille commune. Le traitement inclut le contrôle des valeurs invalides,
+des pixels saturés et des artefacts de bord.
+4.2 Masquage des nuages et des ombres
+Les nuages, leurs ombres et les pixels contaminés peuvent modifier fortement la réflectance
+et les indices. Ils doivent être masqués à partir des couches qualité ou d’une méthode
+documentée.Lemasqueappliquédoitêtreconservéafinquelesstatistiquesdessuperpixels
+ne soient pas calculées comme si les pixels invalides étaient des observations normales.
+Pour un superpixel s à la date t, on définit P comme l’ensemble des pixels valides. Si
+s,t
+P est vide ou trop petit, la statistique associée est marquée manquante ou l’observation
+s,t
+est écartée selon une règle définie à l’avance.
+4.3 Contrôles et journalisation
+Pour chaque scène, le système doit consigner : identifiant de la scène, date, produit,
+projection, résolution, masque qualité, pourcentage de pixels valides, méthode de rééchan-
+tillonnage et anomalies détectées. Les seuils de qualité doivent être paramétrables et les
+scènes exclues doivent apparaître dans le journal d’exécution.
+9
+
+--- PAGE 16 ---
+Chapitre 5
+Segmentation spatiale par SLIC
+5.1 Principe
+SLIC (Simple Linear Iterative Clustering) regroupe les pixels en superpixels compacts et
+relativement homogènes en considérant leur proximité spatiale et leur similarité dans un
+espace de caractéristiques. Il constitue une segmentation intermédiaire : il ne reconnaît
+pas la classe agricole et ne garantit pas que chaque superpixel corresponde à une parcelle.
+Dans une image, un pixel peut être représenté par z = [L ,a ,b ,x ,y ] dans l’espace
+i i i i i i
+CIELAB et les coordonnées spatiales pour une image en couleurs. Dans une application
+multispectrale, la représentation doit être adaptée : un sous-ensemble de bandes, des
+composantesnormaliséesoudesvariablesspectralespeuventêtreutilisées.Laconfiguration
+retenue doit être testée sur des images représentatives et documentée.
+5.2 Distance SLIC
+Une forme courante de la distance combinée est
+s
+(cid:18)m(cid:19)2
+d = d2 + d2 ,
+s feat S spat
+avec
+B
+d2 = X (z −z )2, d2 = (x −x )2 +(y −y )2.
+feat i,b k,b spat i k i k
+b=1
+Ici,idésigneunpixel,k uncentredecluster,B lenombredecaractéristiquesutiliséespour
+la segmentation, S l’espacement nominal des centres et m le paramètre de compacité. Une
+compacité plus forte favorise des régions plus régulières; une valeur plus faible favorise
+davantage l’adhérence aux contours, selon la définition et l’implémentation utilisées.
+5.3 Paramètres à fixer
+Les paramètres à documenter sont :
+— le nombre de superpixels ou leur taille cible;
+10
+
+--- PAGE 17 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+— le paramètre de compacité;
+— le nombre maximal d’itérations et le critère d’arrêt;
+— l’espace de caractéristiques employé pour segmenter;
+— la stratégie de traitement des pixels masqués;
+— la règle d’alignement des superpixels entre dates.
+5.4 Segmentation temporelle et unité de classifica-
+tion
+Deux stratégies sont possibles. La première segmente une image de référence puis utilise
+les mêmes régions pour extraire les caractéristiques temporelles; elle facilite la cohérence
+spatiale mais peut devenir inadéquate si les contours observés changent fortement. La
+seconde segmente plusieurs dates puis établit une correspondance entre régions, ce qui
+est plus complexe et peut provoquer des identifiants incohérents.
+Pour la variante B, la stratégie recommandée est de produire une segmentation de
+référence à partir d’une image représentative ou d’une composition de qualité, puis
+d’extraire les statistiques de toutes les dates sur les mêmes polygones de superpixels.
+Cette option rend les vecteurs temporels comparables. La segmentation doit être évaluée
+visuellement et, si des parcelles de référence sont disponibles, par son recouvrement avec
+les limites connues.
+5.5 Superpixel et parcelle agricole
+Le système doit distinguer trois objets : pixel, superpixel et parcelle. Le superpixel
+est l’unité de calcul des descripteurs. Une parcelle de référence peut contenir plusieurs
+superpixels, et un superpixel peut traverser une limite réelle lorsque la segmentation est
+imparfaite. Si les polygones de parcelles existent, l’étiquette d’un superpixel peut être
+déterminée par la classe dominante des pixels de référence, avec un seuil minimal de
+pureté. Les superpixels trop mélangés peuvent être exclus de l’entraînement ou marqués
+comme ambigus.
+Si A est l’ensemble des pixels d’un superpixel et y leur étiquette de référence, la pureté
+s i
+de classe est
+max P I(y = c)
+q = c∈C i∈As i .
+s P I(y connu)
+i∈As i
+Le seuil q doit être fixé et justifié expérimentalement. Un seuil élevé réduit le bruit
+min
+des étiquettes, mais peut également diminuer le nombre d’exemples disponibles.
+11
+
+--- PAGE 18 ---
+Chapitre 6
+Extraction des caractéristiques
+6.1 Statistiques spectrales par superpixel
+Pour chaque superpixel s, chaque bande b et chaque date t, le système calcule des
+statistiques sur les pixels valides :
+1
+X
+µ = ρ ,
+s,b,t i,b,t
+|P |
+s,t i∈Ps,t
+v
+u 1
+σ = u X (ρ −µ )2.
+s,b,t t i,b,t s,b,t
+|P |
+s,t i∈Ps,t
+Selon le volume et la qualité des données, des statistiques complémentaires peuvent être
+ajoutées : médiane, quantiles, minimum, maximum, écart interquartile et proportion
+de pixels valides. La médiane peut limiter l’influence de valeurs extrêmes; les quantiles
+décrivent l’hétérogénéité interne du superpixel.
+6.2 Caractéristiques temporelles
+Pour chaque superpixel, les séries de NDVI et de NDWI peuvent être représentées par
+vNDVI = [NDVI ,...,NDVI ], vNDWI = [NDWI ,...,NDWI ].
+s s,t1 s,tT s s,t1 s,tT
+Le vecteur peut inclure les valeurs par date ainsi que des résumés temporels : maximum,
+minimum, moyenne, amplitude, écart-type, date du maximum, pente de croissance et
+pente de décroissance. Pour deux observations valides consécutives, une pente simple est
+NDVI −NDVI
+s,t+1 s,t
+r = .
+s,t
+t −t
+t+1 t
+Les dates doivent être exprimées dans une unité cohérente, par exemple en jours. La date
+du maximum et les pentes ne sont calculées que si le nombre d’observations valides est
+suffisant.
+12
+
+--- PAGE 19 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+6.3 Descripteurs spatiaux complémentaires
+La variante B privilégie les caractéristiques spectrales et temporelles. Des variables
+spatiales simples peuvent être ajoutées si elles sont utiles et justifiées : aire du superpixel,
+périmètre,compacité,rapportpérimètre-surfaceoupositiondanslascène.Cesdescripteurs
+ne doivent pas remplacer les informations spectrales. Ils doivent être évalués pour vérifier
+qu’ils n’introduisent pas de biais géographique non transférable à une autre zone.
+6.4 Construction du vecteur final
+Le vecteur descriptif du superpixel s peut s’écrire
+x = [µ ,σ ,vNDVI,vNDWI,τ ,γ ]⊤,
+s s s s s s s
+où τ regroupe les statistiques temporelles et γ les descripteurs géométriques éventuels.
+s s
+La dimension finale p dépend du nombre de dates, de bandes et de statistiques retenues.
+Chaque colonne doit posséder un nom stable, une définition, une unité et une règle de
+gestion des valeurs manquantes.
+13
+
+--- PAGE 20 ---
+Chapitre 7
+Normalisation et réduction de dimen-
+sion
+7.1 Pourquoi normaliser ?
+Les variables issues de sources différentes peuvent avoir des amplitudes, unités et disper-
+sions distinctes. La normalisation fournit une représentation cohérente pour les méthodes
+sensibles à l’échelle, en particulier les méthodes fondées sur les distances et certaines
+méthodes de projection. Random Forest repose principalement sur des divisions par seuils
+et est généralement moins sensible à une mise à l’échelle monotone des caractéristiques.
+La standardisation n’est donc pas une condition mathématique obligatoire pour Random
+Forest seul; elle reste pertinente si le pipeline inclut ACP, distances, comparaison de
+modèles ou descripteurs d’échelles hétérogènes.
+7.2 Min-Max Scaling
+La transformation Min-Max ramène une variable dans l’intervalle [0,1] :
+x−min(x)
+x′ = .
+max(x)−min(x)
+Si max(x) = min(x), la variable est constante et doit être supprimée ou traitée par une
+règle explicite. Cette transformation est facile à interpréter, mais elle est sensible aux
+valeurs aberrantes : une valeur extrême peut comprimer la majorité des observations dans
+un intervalle étroit.
+7.3 Standardisation Z-score
+Pour une caractéristique j, la moyenne empirique sur l’ensemble d’entraînement est
+1 N
+X
+µ = x ,
+j ij
+N
+i=1
+14
+
+--- PAGE 21 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+et l’écart-type empirique est
+v
+u 1 N
+u X
+σ = t (x −µ )2.
+j ij j
+N
+i=1
+La caractéristique standardisée est
+x −µ
+ij j
+z = .
+ij
+σ
+j
+Lorsque σ = 0, la caractéristique est constante sur l’entraînement et doit être supprimée
+j
+ou traitée explicitement. Le Z-score centre les variables et les exprime en unités d’écart-
+type; il ne rend pas automatiquement les données gaussiennes et ne supprime pas
+l’influence de toutes les valeurs aberrantes.
+7.4 Normalisation L2
+Soit un vecteur de caractéristiques
+x = [x ,x ,...,x ]⊤.
+1 2 p
+Sa norme euclidienne est
+v
+∥x∥ 2 = q x2 1 +x2 2 +···+x2 p = u u t X p x2 j .
+j=1
+La version normalisée est
+" #⊤
+x x x
+x′ = = 1 ,..., p ,
+∥x∥ ∥x∥ ∥x∥
+2 2 2
+pour ∥x∥ > 0. Ainsi,
+2
+∥x′∥ = 1.
+2
+La normalisation L2 met l’accent sur la direction relative du vecteur plutôt que sur
+son amplitude globale. Elle n’est pas automatiquement préférable pour des réflectances
+agricoles, car l’amplitude peut contenir une information utile sur l’état du couvert.
+7.5 Choix et règles de prévention de fuite
+Le choix principal pour les transformations sensibles à l’échelle est la standardisation Z-
+score, ajustée uniquement sur les données d’entraînement. Les paramètres µ et σ calculés
+j j
+sur l’entraînement sont ensuite appliqués sans recalcul aux données de validation et de
+test. Cette règle empêche la fuite d’information (data leakage). Les variables catégorielles
+ne doivent pas recevoir une normalisation continue; elles doivent être encodées selon une
+méthode appropriée, si elles sont utilisées.
+15
+
+--- PAGE 22 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+7.6 Réduction de dimensionnalité
+La réduction de dimension vise à limiter la redondance et à représenter les observations
+dans un espace plus compact. Si p est très grand par rapport au nombre d’exemples
+indépendants, le modèle peut apprendre des détails accidentels et mal généraliser. Ce
+phénomène est associé au fléau de la dimensionnalité : lorsque le nombre de dimensions
+augmente, le volume de l’espace croît rapidement et les observations deviennent plus
+clairsemées.
+7.6.1 Analyse en composantes principales (ACP)
+L’ACP transforme des caractéristiques éventuellement standardisées en composantes
+orthogonales qui expliquent progressivement la variance. Si X est la matrice centrée de
+dimension N ×p, sa matrice de covariance est
+1
+Σ = X⊤X.
+N −1
+L’ACP recherche les vecteurs propres v de Σ :
+j
+Σv = λ v ,
+j j j
+où λ est la variance expliquée par la composante j. En conservant les q premières
+j
+composantes, la projection s’écrit
+Z = XV ,
+q
+où V = [v ,...,v ] et q < p. La proportion cumulée de variance expliquée est
+q 1 q
+Pq λ
+R = j=1 j .
+q Pp λ
+j=1 j
+Un taux élevé de variance conservée ne garantit pas à lui seul une meilleure séparation
+des classes; le nombre de composantes doit aussi être choisi par validation.
+7.6.2 Projection de Sammon
+La projection de Sammon est une méthode non linéaire destinée à préserver autant que
+possible les distances entre observations dans un espace réduit. Une formulation courante
+de son objectif est
+1 (d −d′ )2
+E = X ij ij ,
+Sammon P d d
+i<j ij i<j ij
+où d est la distance entre les observations i et j dans l’espace initial et d′ leur distance
+ij ij
+dans l’espace projeté. Les distances nulles nécessitent un traitement numérique. Cette
+méthode est coûteuse sur de grands ensembles, et son usage principal dans ce projet est
+la visualisation exploratoire des groupes plutôt qu’une étape obligatoire de production.
+16
+
+--- PAGE 23 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+7.7 Décision opérationnelle
+La chaîne principale doit comparer au minimum :
+1. Random Forest sur les caractéristiques spectrales et temporelles sélectionnées;
+2. Random Forest après sélection de caractéristiques ou réduction ACP, si cette étape
+améliore la validation;
+3. une représentation de faible dimension pour la visualisation, éventuellement par
+projection de Sammon sur un sous-échantillon.
+La réduction n’est conservée dans le pipeline final que si elle améliore la généralisation, la
+stabilitéoulescoûtsdecalcul.PuisqueRandomForestgèredenombreusescaractéristiques
+sans exiger de mise à l’échelle, une réduction systématique ne doit pas être présentée
+comme obligatoire.
+17
+
+--- PAGE 24 ---
+Chapitre 8
+Modèle prédictif : Random Forest
+8.1 Apprentissage supervisé
+L’approche retenue est supervisée, car le modèle apprend à partir d’exemples dont la
+classe est connue. Le jeu d’apprentissage est constitué de couples
+D = {(x ,y )}Ntrain, y ∈ C.
+train i i i=1 i
+Le modèle ajuste une fonction de prédiction à partir de ces exemples, puis prédit les classes
+de nouveaux superpixels. La qualité de cette généralisation dépend de la représentativité
+des exemples, de la fiabilité des étiquettes et de l’indépendance du protocole d’évaluation.
+8.2 Principe des forêts aléatoires
+Random Forest est un ensemble de M arbres de décision. Chaque arbre est entraîné sur
+un échantillon bootstrap ou un sous-échantillon aléatoire et considère un sous-ensemble
+aléatoire de caractéristiques lors des divisions. La diversification des arbres limite leur
+corrélation; l’agrégation de leurs prédictions réduit généralement la variance par rapport
+à un arbre isolé.
+On peut noter les arbres
+{h(x,Θ )}M ,
+m m=1
+où Θ représente les choix aléatoires associés à l’arbre m. La prédiction finale par vote
+m
+majoritaire est
+M
+yˆ(x) = argmax X I (cid:16) h(x,Θ ) = c (cid:17) ,
+m
+c∈C m=1
+où I(·) vaut 1 si la proposition est vraie et 0 sinon. Une estimation de probabilité de
+classe peut être obtenue à partir de la proportion d’arbres votant pour chaque classe :
+P ˆ (y = c | x) = 1 X M I (cid:16) h(x,Θ ) = c (cid:17) .
+m
+M
+m=1
+18
+
+--- PAGE 25 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+8.3 Fonction de division des arbres
+À chaque nœud, l’arbre recherche une division réduisant l’impureté. Pour un nœud t,
+l’indice de Gini peut s’écrire
+K
+G(t) = 1− X p(c | t)2,
+c=1
+où p(c | t) est la proportion d’exemples de classe c dans le nœud. Une division est choisie
+pour réduire l’impureté pondérée des nœuds enfants. Random Forest peut ainsi construire
+des règles non linéaires et des interactions entre variables, sans supposer que les frontières
+de classe sont des hyperplans.
+8.4 Justification du choix
+Non-linéarité. La signature du maïs est une combinaison de réponses spectrales et
+d’évolutions temporelles. Les arbres peuvent construire des règles hiérarchiques portant
+sur plusieurs dates et bandes; leur ensemble représente des frontières complexes.
+Robustesse. Le vote agrégé réduit la dépendance à un arbre unique et tolère une partie
+du bruit. Cette robustesse reste relative : des labels systématiquement erronés, des classes
+absentes ou un décalage géographique important peuvent dégrader les résultats.
+Caractéristiques multiples. Le modèle accepte un grand nombre de variables et ne
+nécessite pas de normalité gaussienne des caractéristiques. Il peut fournir des estimations
+d’importance des variables, à interpréter avec prudence lorsque des variables sont corrélées.
+Comparaison avec un modèle linéaire. Une fonction g(x) = w⊤x+b est simple et
+interprétable, mais sa frontière est linéaire. Random Forest est retenu comme modèle
+principal pour sa capacité à modéliser des interactions non linéaires. Une référence linéaire
+peut néanmoins être utile comme baseline expérimentale.
+Comparaison avec k-PPV. Le classifieur des k plus proches voisins s’appuie sur une
+distance telle que
+v
+u p
+uX
+d(x ,x ) = t (x −x )2.
+i j ir jr
+r=1
+Il peut être pertinent pour des jeux de taille modérée, mais la recherche des voisins à
+l’inférence peut être coûteuse sur de grandes séries de superpixels et dépend fortement de
+l’échelle des variables. Il n’est donc pas le modèle principal proposé.
+8.5 Paramètres à ajuster
+Les paramètres à documenter et à régler sur validation comprennent :
+— nombre d’arbres M ;
+— profondeur maximale des arbres;
+— nombre minimal d’échantillons requis pour diviser un nœud et pour une feuille;
+19
+
+--- PAGE 26 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+— nombre de caractéristiques candidates par division;
+— critère d’impureté;
+— pondération des classes ou stratégie de rééchantillonnage en cas de déséquilibre;
+— graine aléatoire et version logicielle.
+Le réglage doit être conduit sur l’ensemble d’entraînement et de validation uniquement.
+Le jeu de test final ne doit pas servir à choisir les hyperparamètres.
+20
+
+--- PAGE 27 ---
+Chapitre 9
+Organisation de l’apprentissage et pro-
+tocole expérimental
+9.1 Partitionnement des données
+Les superpixels voisins d’une même parcelle ou issus d’une même scène sont souvent
+corrélés. Une séparation aléatoire de superpixels peut donc placer des exemples presque
+identiques dans l’entraînement et le test et surestimer la performance. Le protocole
+privilégié consiste à séparer les données par parcelle, bloc spatial, zone géographique ou
+date indépendante, selon les données disponibles.
+Les trois ensembles sont :
+— entraînement : ajustement du modèle et des transformations;
+— validation : sélection des paramètres, des caractéristiques et du seuil de pureté;
+— test : évaluation finale, une fois les choix arrêtés.
+Les proportions exactes dépendent de la taille et de la structure du dataset. Elles doivent
+être fixées et consignées avant l’évaluation finale. La répartition doit préserver, autant
+que possible, la présence de chaque classe dans les sous-ensembles.
+9.2 Déséquilibre des classes
+Le maïs peut représenter une fraction minoritaire ou majoritaire de la zone étudiée.
+L’exactitude globale peut alors masquer de faibles performances sur les classes rares.
+Le système doit rapporter les effectifs par classe et envisager des pondérations ou un
+rééchantillonnage uniquement sur les données d’entraînement. La distribution originale
+des classes doit être conservée pour interpréter les résultats du test.
+9.3 Comparaison expérimentale
+Les expériences doivent isoler l’effet des choix méthodologiques. Le minimum recommandé
+est :
+21
+
+--- PAGE 28 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+1. modèle Random Forest avec caractéristiques spectrales par date;
+2. ajout des indices NDVI et NDWI;
+3. ajout des résumés temporels;
+4. comparaison avec et sans sélection de caractéristiques ou ACP;
+5. comparaison de plusieurs configurations SLIC;
+6. évaluation finale sur le même jeu de test indépendant.
+Chaque expérience doit conserver la même partition de données afin que les écarts de
+performance soient interprétables. Les résultats doivent inclure les paramètres et le temps
+de calcul.
+22
+
+--- PAGE 29 ---
+Chapitre 10
+Évaluation des performances
+10.1 Matrice de confusion
+La matrice de confusion compare les classes réelles et prédites. Pour K classes, on définit
+C = #{n : y = c et yˆ = c }.
+ij n i n j
+Les lignes représentent les classes réelles et les colonnes les classes prédites, convention qui
+doitêtrepréciséedanslerapport.Ladiagonalecontientlesprédictionscorrectes;lesautres
+cellules décrivent les confusions. Pour le projet, il est essentiel d’observer notamment les
+confusions entre maïs et prairies/savane, ainsi qu’entre maïs et arboriculture.
+10.2 Exactitude globale
+Pour un problème binaire, l’exactitude peut être exprimée par
+TP +TN
+Accuracy = .
+TP +TN +FP +FN
+Pour une classification multiclasses, la formulation générale est
+PK C
+Accuracy = i=1 ii .
+PK PK C
+i=1 j=1 ij
+Elle mesure la proportion totale de prédictions correctes, mais peut être trompeuse lorsque
+les classes sont déséquilibrées.
+10.3 Précision
+Pour une classe considérée comme positive, la précision est
+TP
+Précision = .
+TP +FP
+Elle indique, parmi les unités prédites comme appartenant à cette classe, la proportion
+réellement correcte. Une précision élevée pour le maïs signifie que les zones annoncées
+comme maïs sont rarement d’autres classes.
+23
+
+--- PAGE 30 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+10.4 Rappel ou sensibilité
+Le rappel est
+TP
+Rappel = .
+TP +FN
+Il mesure la proportion des unités réellement positives que le modèle retrouve. Un rappel
+faible pour le maïs signifie qu’une partie importante des superpixels de maïs est classée
+dans les classes concurrentes.
+10.5 Spécificité
+La spécificité est
+TN
+Spécificité = .
+TN +FP
+Elle mesure la proportion des exemples négatifs correctement identifiés dans une formula-
+tion binaire. Dans un problème multiclasses, elle peut être calculée classe par classe en
+considérant la classe étudiée comme positive et toutes les autres comme négatives.
+10.6 F1-score
+Le F1-score est la moyenne harmonique de la précision et du rappel :
+Précision×Rappel 2TP
+F = 2 = .
+1
+Précision+Rappel 2TP +FP +FN
+Le F1-score est utile lorsque l’on veut équilibrer les faux positifs et les faux négatifs,
+notamment en présence d’un déséquilibre de classes. Il doit être rapporté par classe,
+particulièrement pour le maïs, et complété par une moyenne macro :
+1 K
+X
+F = F .
+1,macro 1,c
+K
+c=1
+La moyenne pondérée peut aussi être fournie, mais elle donne davantage de poids aux
+classes nombreuses.
+10.7 Z-score et F1-score : deux notions différentes
+Le Z-score et le F1-score ne sont pas des mesures concurrentes. Le Z-score est une
+transformation des caractéristiques utilisée en prétraitement :
+x−µ
+z = .
+σ
+Le F1-score est une métrique d’évaluation des prédictions. Il ne transforme pas les données
+et ne normalise pas les variables. Le premier concerne la représentation des entrées; le
+second mesure la qualité de classification. La matrice de confusion fournit les comptes
+nécessaires au calcul des métriques.
+24
+
+--- PAGE 31 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+10.8 Protocole de rapport des résultats
+Le rapport doit présenter au minimum :
+— matrice de confusion complète;
+— exactitude globale;
+— précision, rappel et F1-score par classe;
+— F1 macro et, si pertinent, F1 pondéré;
+— nombre d’exemples testés par classe;
+— méthode de partitionnement et preuve de séparation spatiale ou par parcelle;
+— incertitudes, erreurs typiques et exemples de zones confondues;
+— temps d’entraînement, temps d’inférence et paramètres retenus.
+Aucun seuil de performance chiffré ne doit être annoncé avant l’exécution des expériences.
+Les objectifs de qualité peuvent être définis avec l’encadrement à partir de la difficulté
+du dataset et de l’usage visé.
+25
+
+--- PAGE 32 ---
+Chapitre 11
+Post-traitement et production carto-
+graphique
+11.1 Retour des prédictions vers l’espace
+Chaque superpixel reçoit une classe prédite et, si disponible, une estimation de probabilité
+par classe. Les résultats sont réinjectés dans la grille géographique d’origine pour produire
+une carte catégorielle. Si plusieurs superpixels appartiennent à une même parcelle connue,
+une règle d’agrégation peut être appliquée : vote majoritaire pondéré par l’aire, moyenne
+des probabilités ou conservation des sous-régions lorsque l’hétérogénéité est réelle.
+11.2 Règles de post-traitement
+Tout lissage spatial doit être contrôlé. Un lissage trop fort peut effacer de petites parcelles
+ou déplacer des frontières. Le post-traitement doit donc être évalué sur les mêmes
+références que le modèle brut. Les classes peu fiables ou les zones dont la probabilité
+maximale est faible peuvent être signalées comme incertaines plutôt que forcées dans une
+classe.
+11.3 Livrables cartographiques
+Les livrables géographiques comprennent :
+— carte de classification géoréférencée;
+— raster des codes de classes et, si possible, raster des probabilités;
+— légende et nomenclature documentées;
+— couche vectorielle des superpixels avec identifiant, classe prédite et attributs
+essentiels;
+— couche des zones invalides ou non classées;
+— métadonnées décrivant le système de coordonnées, la résolution, les dates et le
+26
+
+--- PAGE 33 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+modèle.
+27
+
+--- PAGE 34 ---
+Chapitre 12
+Responsabilités et organisation opé-
+rationnelle
+12.1 Responsabilité générale du projet
+L’équipe est responsable de la cohérence de bout en bout : la donnée utilisée doit
+correspondre à la question scientifique, la segmentation doit être adaptée à la résolution
+et à l’emprise, les caractéristiques doivent être calculées sans fuite d’information, et
+l’évaluation doit mesurer la capacité à généraliser à de nouvelles parcelles. Chaque étape
+doit être traçable par du code, des paramètres et des journaux.
+12.2 Responsabilités détaillées par chantier
+12.2.1 Responsable 1 : données et télédétection
+— sélectionner et documenter le dataset centré sur le maïs;
+— inventorier les images, dates, bandes, projections, résolutions et licences;
+— vérifier les références de terrain et la nomenclature des classes;
+— produire les masques nuages/ombres et harmoniser les grilles spatiales;
+— contrôler les données manquantes et produire un rapport de qualité;
+— assurer la traçabilité des transformations et des données sources.
+Livrables : fiche dataset, inventaire des scènes, données prétraitées, masques qualité et
+rapport de contrôle.
+12.2.2 Responsable 2 : segmentation SLIC
+— choisir la représentation utilisée par SLIC et justifier ses bandes ou composantes;
+— tester les paramètres de nombre/taille de superpixels et de compacité;
+28
+
+--- PAGE 35 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+— examinerl’adhérencedesrégionsauxfrontièresvisiblesetauxparcellesderéférence;
+— fixer la stratégie de segmentation de référence pour l’ensemble de la série;
+— attribuer un identifiant stable à chaque superpixel et documenter les limites;
+— calculer la pureté des labels lorsqu’une référence pixel ou parcellaire est disponible.
+Livrables : couche des superpixels, configuration SLIC, exemples visuels et note de
+validation de segmentation.
+12.2.3 Responsable 3 : extraction des caractéristiques
+— calculer les statistiques de B ,B ,B ,B ,B ,B par superpixel et par date;
+2 3 4 8 11 12
+— calculer les séries NDVI et NDWI selon les formules spécifiées;
+— produire les résumés temporels et les indicateurs de qualité associés;
+— gérer explicitement les dates manquantes, valeurs aberrantes et superpixels inva-
+lides;
+— construire une table de caractéristiques documentée, avec noms de colonnes et
+unités;
+— contrôler la stabilité et la reproductibilité de l’extraction.
+Livrables : table de caractéristiques, dictionnaire des variables, code d’extraction et
+rapport qualité.
+12.2.4 Responsable 4 : apprentissage et évaluation
+— établir les partitions d’entraînement, validation et test sans fuite spatiale ou
+parcellaire;
+— implémenter le pipeline de transformation et Random Forest;
+— comparer les configurations de caractéristiques, de réduction et d’hyperparamètres;
+— traiter le déséquilibre des classes uniquement dans le cadre prévu;
+— produire matrice de confusion, exactitude, précision, rappel, F1 par classe et F1
+macro;
+— analyser les erreurs, l’importance des variables et les limites du modèle.
+Livrables : modèle entraîné, configuration retenue, résultats expérimentaux, matrices
+de confusion et rapport d’évaluation.
+12.2.5 Responsable 5 : cartographie, intégration et reproducti-
+bilité
+— réinjecter les prédictions dans les grilles géographiques;
+29
+
+--- PAGE 36 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+— produire les cartes finales et les fichiers raster/vectoriels;
+— documenter les formats, projections, légendes et classes;
+— organiser le code, les dépendances, les paramètres et les versions;
+— fournir une procédure d’exécution depuis les données sources jusqu’aux résultats;
+— vérifier que les résultats peuvent être reproduits par un autre membre de l’équipe.
+Livrables : cartes, fichiers géographiques, dépôt de code organisé, instructions d’installa-
+tion et rapport final.
+12.3 Responsabilités transversales
+Tous les responsables doivent :
+— versionner les scripts et les paramètres;
+— ne pas écraser les données sources;
+— consigner les décisions méthodologiques et leurs justifications;
+— signaler les hypothèses, données manquantes et limites;
+— vérifier la compatibilité des identifiants entre superpixels, caractéristiques, labels
+et prédictions;
+— respecter les licences, règles d’accès et exigences de citation des données.
+Une personne peut cumuler plusieurs chantiers si l’équipe est réduite, mais les livrables
+et les contrôles doivent rester explicitement attribués.
+30
+
+--- PAGE 37 ---
+Chapitre 13
+Architecture logicielle et exigences
+techniques
+13.1 Organisation logique
+L’implémentation doit être organisée en modules indépendants :
+1. data_inventory : inventaire et validation des scènes;
+2. preprocessing : masques, rééchantillonnage et alignement;
+3. slic_segmentation : segmentation et export des identifiants;
+4. feature_extraction : statistiques spectrales et temporelles;
+5. dataset_builder : association caractéristiques-labels et partitionnement;
+6. training : transformations, sélection et entraînement Random Forest;
+7. evaluation : métriques, matrices et diagnostics;
+8. mapping : export cartographique et métadonnées.
+13.2 Exigences de reproductibilité
+Le projet doit fournir un fichier de configuration contenant les dates, bandes, résolution
+de travail, paramètres SLIC, règles de qualité, variables retenues, partitionnement, hy-
+perparamètres Random Forest et graines aléatoires. Les versions des bibliothèques, du
+système et des sources de données doivent être consignées. Les sorties doivent porter un
+identifiant de version du pipeline.
+13.3 Formats et nommage
+Les images et cartes peuvent être stockées en GeoTIFF; les géométries de superpixels
+et parcelles dans un format vectoriel géospatial tel que GeoPackage; les tables de
+caractéristiques en CSV ou Parquet; les modèles dans un format sérialisé documenté.
+31
+
+--- PAGE 38 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+Les noms de fichiers doivent inclure, lorsque pertinent, la zone, la période, la version et
+l’étape de traitement. Les fichiers sources ne doivent pas être remplacés par des versions
+transformées.
+13.4 Gestion des ressources
+La mémoire et le temps de calcul doivent être surveillés, particulièrement lors de l’extrac-
+tion temporelle et de la projection de Sammon. Le traitement doit pouvoir être exécuté
+par tuiles spatiales si la taille des images l’exige. Les tuiles doivent utiliser des marges ou
+une stratégie de raccordement empêchant les artefacts aux frontières. Le coût de calcul
+et la taille des sorties doivent être consignés.
+32
+
+--- PAGE 39 ---
+Chapitre 14
+Risques, limites et mesures de maî-
+trise
+Table 14.1 – Risques méthodologiques et mesures de maîtrise
+Risque Conséquence possible Mesure de maîtrise
+Labels imprécis Le modèle apprend des asso- Vérifier la provenance, la date et
+ciations erronées. la pureté des labels; exclure ou
+signaler les cas ambigus.
+Nuages et ombres Indices et réflectances biaisés. Appliquer des masques qualité et
+documenter les pixels valides.
+Confusionphénolo- Maïs confondu avec prairie Utiliser une série temporelle cou-
+gique ou autre culture à certaines vrant le cycle cultural et analyser
+dates. les erreurs par classe.
+Superpixels traver- Descripteurs mélangeant plu- Tester SLIC, utiliser les polygones
+sant les parcelles sieurs classes. de référence et contrôler la pureté.
+Fuite spatiale Mesures d’évaluation artifi- Séparer par parcelle, bloc spatial
+ciellement élevées. ou zone indépendante.
+Déséquilibre de L’exactitude masque les Rapporter F1 par classe et F1 ma-
+classes classes rares. cro; documenter les effectifs.
+Réduction de Perte d’information utile à la Comparer les performances avec
+dimension inadé- classification. et sans réduction sur validation.
+quate
+Surapprentissage Faible performance sur de Ajuster les hyperparamètres sur
+nouvelles zones. validation et préserver un test in-
+dépendant.
+Transfert géogra- Dégradation hors de la zone Tester sur une zone ou une sai-
+phique limité d’entraînement. son indépendante si les données le
+permettent.
+33
+
+--- PAGE 40 ---
+Chapitre 15
+Plan de réalisation et critères d’accep-
+tation
+15.1 Étapes de réalisation
+1. Cadrage des données : confirmer la zone d’étude, la saison, le dataset maïs, la
+licence et les références.
+2. Prétraitement : harmoniser les images, produire les masques et vérifier les séries
+temporelles.
+3. Segmentation : configurer SLIC, produire les superpixels et valider leur qualité.
+4. Extraction : calculer les descripteurs spectraux et temporels et contrôler la table
+obtenue.
+5. Construction des labels : associer les superpixels aux classes selon une règle
+documentée.
+6. Apprentissage : définir les partitions, ajuster les transformations et entraîner
+Random Forest.
+7. Expérimentation : comparer les variantes et sélectionner le pipeline sur valida-
+tion.
+8. Évaluation finale : produire les métriques et la matrice de confusion sur le test
+indépendant.
+9. Cartographie : exporter les prédictions, les probabilités éventuelles et les méta-
+données.
+10. Livraison : remettre le code, les configurations, les résultats et le rapport de
+reproductibilité.
+15.2 Critères d’acceptation
+Le projet est considéré comme techniquement livré lorsque :
+34
+
+--- PAGE 41 ---
+Classification agricole par télédétecStLioInC + caractéristiques spectrales + Random Forest
+— le dataset et les labels sont documentés et leur licence vérifiée;
+— le pipeline peut être exécuté de bout en bout à partir d’une configuration connue;
+— les étapes de prétraitement et les paramètres SLIC sont traçables;
+— chaque superpixel exploitable dispose d’un vecteur de caractéristiques et d’un label
+ou d’un statut explicite;
+— la séparation entraînement/validation/test est documentée et limite la fuite spa-
+tiale;
+— le modèle Random Forest est entraîné et ses paramètres sont fournis;
+— la matrice de confusion et les métriques par classe sont calculées;
+— la carte finale est géoréférencée et accompagnée de sa légende;
+— les limites, erreurs principales et risques de transfert sont décrits;
+— le code, les dépendances et les instructions de reproduction sont remis.
+Les seuils numériques de performance seront fixés après une première analyse du dataset
+et avant l’évaluation finale, en accord avec les objectifs scientifiques. L’acceptation ne
+doit pas reposer sur l’exactitude globale seule.
+35
+
+--- PAGE 42 ---
+Chapitre 16
+Livrables attendus
+Table 16.1 – Liste consolidée des livrables
+ID Livrable Contenu minimal
+L1 Fiche dataset Source, licence, emprise, saison, bandes, dates,
+labels et limites.
+L2 Données prétraitées Imagesalignées,masquesqualité,métadonnées
+et journal d’exécution.
+L3 Segmentation SLIC Superpixels géoréférencés, paramètres,
+exemples et contrôle qualité.
+L4 Table de caractéristiques Variables spectrales, indices, résumés tempo-
+rels, dictionnaire et règles des valeurs man-
+quantes.
+L5 Dataset supervisé Table associant caractéristiques, labels, identi-
+fiants spatiaux et partitionnement.
+L6 Modèle Random Forest Modèle entraîné, hyperparamètres, version des
+bibliothèques et procédure de chargement.
+L7 Rapport d’évaluation Matrice de confusion, précision, rappel, F1 par
+classe, exactitude, analyse d’erreurs.
+L8 Cartographie finale Raster de classes, probabilités si disponibles,
+couche des superpixels et légende.
+L9 Code et configuration Scriptsmodulaires,configuration,dépendances
+et consignes de lancement.
+L10 Rapport final Méthodologie, équations, justifications, résul-
+tats, limites et recommandations.
+36
+
+--- PAGE 43 ---
+Chapitre 17
+Synthèse théorique des choix retenus
+Table 17.1 – Alignement entre les composantes, les choix et leur justification
+Composante Choix retenu Justification
+Données d’en- Séries Sentinel-2 multis- Réponse spectrale et évolution temporelle
+trée pectrales utiles à la discrimination des cultures.
+Cible principale Maïs Classe prioritaire dont la dynamique phénolo-
+gique est étudiée.
+Segmentation SLIC Regroupement spatial en régions homogènes
+pour calculer des descripteurs locaux.
+Descripteurs Statistiques de bandes, Représentation plus riche qu’une observation
+NDVI, NDWI et résumés mono-date.
+temporels
+Prétraitement Contrôle qualité et Z- Réduction des incohérences de mesure et mise
+score lorsque pertinent à l’échelle pour les étapes sensibles à l’échelle.
+Réduction Sélection de caractéris- Réductionderedondancesanssupposerqu’elle
+tiquesouACP,aprèscom- améliore automatiquement la classification.
+paraison
+Projection Sam- Exploration et visualisa- Visualisation non linéaire de la structure des
+mon tion données, avec coût calculatoire à contrôler.
+Apprentissage Supervisé Exploitation d’exemples étiquetés de maïs et
+de classes concurrentes.
+Classifieur Random Forest Modélisation non linéaire, interactions entre
+variables et agrégation de plusieurs arbres.
+Évaluation Matrice de confusion, F1 Analyse des confusions et meilleure lecture en
+par classe et F1 macro cas de déséquilibre.
+Validation Partition spatiale ou par Réduction du risque d’estimation trop opti-
+parcelle miste dû à l’autocorrélation spatiale.
+37
+
+--- PAGE 44 ---
+Conclusion
+Ce cahier des charges définit une chaîne de reconnaissance des formes consacrée à la
+classification de parcelles agricoles par superpixels SLIC, caractéristiques spectrales et
+temporelles, et Random Forest. Le maïs constitue la classe principale; l’arboriculture,
+les prairies/savanes et les sols nus/surfaces bâties constituent les classes concurrentes.
+La méthode s’appuie sur des données Sentinel-2 organisées en série temporelle afin de
+capturer non seulement les niveaux spectraux, mais également leur dynamique au cours
+du cycle cultural.
+La fiabilité du système dépendra autant de la qualité des références et de la segmentation
+que du classifieur. Les superpixels ne doivent pas être assimilés automatiquement à
+des parcelles, les transformations doivent être ajustées sans fuite d’information, et les
+performances doivent être jugées à partir d’une matrice de confusion et de métriques par
+classe. Random Forest est retenu pour sa capacité à modéliser des relations non linéaires
+et à agréger plusieurs arbres, tandis que la normalisation et la réduction de dimension
+restent des étapes à justifier expérimentalement plutôt que des opérations systématiques.
+La livraison finale doit associer le modèle à des données traçables, une cartographie inter-
+prétable, des scripts reproductibles, des paramètres documentés et une analyse explicite
+des limites. Le système ainsi conçu constitue une base opérationnelle et académique pour
+la reconnaissance supervisée des cultures à partir de la télédétection spatio-temporelle.
+38

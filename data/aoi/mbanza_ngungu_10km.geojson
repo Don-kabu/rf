@@ -1,0 +1,30 @@
+{
+  "type": "FeatureCollection",
+  "name": "mbanza_ngungu_pilot_approx_10km",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Emprise pilote autour de Mbanza-Ngungu",
+        "province": "Kongo Central",
+        "country": "République démocratique du Congo",
+        "center_lon": 14.858382,
+        "center_lat": -5.258369,
+        "approx_width_km": 10,
+        "approx_height_km": 10,
+        "worldcereal_aez_id": 4010,
+        "status": "emprise de cadrage à contrôler avec les pixels des produits"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [14.813277, -5.303285],
+          [14.903487, -5.303285],
+          [14.903487, -5.213453],
+          [14.813277, -5.213453],
+          [14.813277, -5.303285]
+        ]]
+      }
+    }
+  ]
+}

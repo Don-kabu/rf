@@ -1,0 +1,73 @@
+{
+  "status": "template_not_executed",
+  "study": {
+    "name": "Mbanza-Ngungu, Kongo Central",
+    "aoi_file": "data/aoi/mbanza_ngungu_10km.geojson",
+    "year": 2021
+  },
+  "imagery": {
+    "collection": "COPERNICUS/S2_SR_HARMONIZED",
+    "bands": ["B2", "B3", "B4", "B8", "B11", "B12"],
+    "target_crs": null,
+    "target_resolution_m": null,
+    "dates_or_windows": null,
+    "composite_method": null,
+    "scl_excluded_classes": [0, 1, 3, 8, 9, 10, 11]
+  },
+  "segmentation": {
+    "algorithm": "SLIC",
+    "input_bands": ["B2", "B3", "B4", "B8"],
+    "per_band_scaling_candidate": "clip_valid_pixel_percentiles_2_98_to_0_1",
+    "scaling_percentiles_candidate": [2, 98],
+    "n_segments": null,
+    "compactness": null,
+    "sigma": null,
+    "enforce_connectivity": true
+  },
+  "features": {
+    "band_statistics": ["median"],
+    "indices": {
+      "NDVI": "(B8 - B4) / (B8 + B4)",
+      "NDMI_B8_B11": "(B8 - B11) / (B8 + B11)"
+    },
+    "temporal_statistics_candidate": ["median", "p10", "p90", "p90_minus_p10"],
+    "minimum_valid_pixel_fraction": null
+  },
+  "labels": {
+    "reference_source": null,
+    "class_mapping": null,
+    "segment_rule": "majority_valid_reference_pixels",
+    "minimum_purity_candidate": 0.7,
+    "ignored_values": null
+  },
+  "split": {
+    "strategy": "spatial_blocks",
+    "train_fraction_candidate": 0.8,
+    "test_fraction_candidate": 0.2,
+    "block_size_m": null,
+    "random_seed": 42
+  },
+  "classifier": {
+    "algorithm": "RandomForestClassifier",
+    "n_estimators_candidate": 300,
+    "max_features_candidate": "sqrt",
+    "class_weight_candidate": "balanced",
+    "random_seed": 42
+  },
+  "evaluation": {
+    "confusion_matrix_orientation": "rows=reference, columns=predicted",
+    "metrics": [
+      "accuracy",
+      "precision_per_class",
+      "recall_per_class",
+      "f1_per_class",
+      "macro_f1"
+    ],
+    "evaluation_partition": "held_out_spatial_blocks"
+  },
+  "notes": [
+    "This is a planning template and is not read by the current application.",
+    "Candidate values must be reviewed after raster and label audits.",
+    "WorldCereal and WorldCover categories do not directly provide all four classes from the subject."
+  ]
+}

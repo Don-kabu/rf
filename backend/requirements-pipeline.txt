@@ -1,0 +1,4 @@
+# Optional array-based scientific pipeline dependencies; not needed by the demo launcher.
+numpy>=1.26,<3
+scikit-image>=0.23,<0.27
+scikit-learn>=1.4,<2
